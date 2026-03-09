@@ -1,51 +1,53 @@
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { v4 as uuidv4 } from 'uuid';
 import CollaborativeEditor from './components/CollaborativeEditor';
-import RoomSelector from './components/RoomSelector';
-import UserPanel from './components/UserPanel';
 import './App.css';
 
 function App() {
-  const [roomId, setRoomId] = useState(null);
-  const [userName, setUserName] = useState('');
+  const [searchParams] = useSearchParams();
+
+  // Read room info directly from URL params passed by CLP dashboard
+  const [roomId] = useState(() => searchParams.get('roomId') || null);
+  const [userName] = useState(() => {
+    const urlName = searchParams.get('userName');
+    if (urlName) return urlName;
+    return localStorage.getItem('userName') || 'Anonymous';
+  });
+  const [isCreating] = useState(() => searchParams.get('creating') === 'true');
   const [userId] = useState(() => uuidv4());
 
-  // Load saved username
+  // Persist username for future sessions
   useEffect(() => {
-    const savedName = localStorage.getItem('userName');
-    if (savedName) {
-      setUserName(savedName);
-    }
-  }, []);
-
-  const [isCreating, setIsCreating] = useState(false);
-
-  const handleJoinRoom = (room, name, creating) => {
-    setRoomId(room);
-    setUserName(name);
-    setIsCreating(!!creating);
-    localStorage.setItem('userName', name);
-  };
+    if (userName) localStorage.setItem('userName', userName);
+  }, [userName]);
 
   const handleLeaveRoom = () => {
-    setRoomId(null);
+    window.close(); // close the editor tab and go back to CLP
   };
+
+  if (!roomId) {
+    return (
+      <div className="app" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', background: '#1e1e2e', color: '#cdd6f4' }}>
+        <div style={{ textAlign: 'center' }}>
+          <h2 style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>No room specified</h2>
+          <p style={{ opacity: 0.6 }}>Please open this editor from the CLP dashboard.</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="app">
-      {!roomId ? (
-        <RoomSelector onJoinRoom={handleJoinRoom} initialUserName={userName} />
-      ) : (
-        <div className="editor-container">
-          <CollaborativeEditor
-            roomId={roomId}
-            userName={userName}
-            userId={userId}
-            isCreating={isCreating}
-            onLeaveRoom={handleLeaveRoom}
-          />
-        </div>
-      )}
+      <div className="editor-container">
+        <CollaborativeEditor
+          roomId={roomId}
+          userName={userName}
+          userId={userId}
+          isCreating={isCreating}
+          onLeaveRoom={handleLeaveRoom}
+        />
+      </div>
     </div>
   );
 }
