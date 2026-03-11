@@ -7,6 +7,11 @@ import RoomManager from './services/RoomManager.js';
 import { applyOperation, transformOperation } from './services/OperationalTransform.js';
 import CodeExecutor from './services/CodeExecutor.js';
 import FileSystemManager from './services/FileSystemManager.js';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 dotenv.config();
 
@@ -41,6 +46,15 @@ app.get('/health', (req, res) => {
     rooms: roomManager.getRoomCount(),
     users: roomManager.getTotalUsers()
   });
+});
+
+// Serve frontend static files
+const distPath = path.join(__dirname, '../../client/dist');
+app.use(express.static(distPath));
+
+// Fallback for React Router (Single Page Application)
+app.get('*', (req, res) => {
+  res.sendFile(path.join(distPath, 'index.html'));
 });
 
 // Socket.IO connection handling
