@@ -21,10 +21,10 @@ class FileSystemManager {
   }
 
   /**
-   * Get room-specific workspace path
+   * Get group-specific workspace path
    */
-  getRoomWorkspace(roomId) {
-    return path.join(this.workspaceRoot, roomId);
+  getGroupWorkspace(groupId) {
+    return path.join(this.workspaceRoot, groupId);
   }
 
   async ensureWorkspace() {
@@ -36,47 +36,47 @@ class FileSystemManager {
   }
 
   /**
-   * Ensure room workspace exists
+   * Ensure group workspace exists
    */
-  async ensureRoomWorkspace(roomId) {
-    const roomWorkspace = this.getRoomWorkspace(roomId);
+  async ensureGroupWorkspace(groupId) {
+    const groupWorkspace = this.getGroupWorkspace(groupId);
     try {
-      await fs.access(roomWorkspace);
+      await fs.access(groupWorkspace);
     } catch {
-      await fs.mkdir(roomWorkspace, { recursive: true });
-      await this.createDefaultStructure(roomId);
+      await fs.mkdir(groupWorkspace, { recursive: true });
+      await this.createDefaultStructure(groupId);
     }
   }
 
-  async createDefaultStructure(roomId) {
-    const roomWorkspace = this.getRoomWorkspace(roomId);
+  async createDefaultStructure(groupId) {
+    const groupWorkspace = this.getGroupWorkspace(groupId);
     const defaultFolders = ['src', 'tests', 'docs'];
     for (const folder of defaultFolders) {
-      await fs.mkdir(path.join(roomWorkspace, folder), { recursive: true });
+      await fs.mkdir(path.join(groupWorkspace, folder), { recursive: true });
     }
     
     // Create a welcome file
     const welcomeContent = `// Welcome to Collaborative Code Editor!
-// Room: ${roomId}
+// Group: ${groupId}
 // Start coding together in real-time
-// All files are saved automatically and shared with everyone in this room
+// All files are saved automatically and shared with everyone in this group
 
 console.log("Hello, World!");
 `;
     await fs.writeFile(
-      path.join(roomWorkspace, 'index.js'),
+      path.join(groupWorkspace, 'index.js'),
       welcomeContent
     );
   }
 
   /**
-   * Get workspace structure for a room
+   * Get workspace structure for a group
    */
-  async getFileTree(roomId, relativePath = '') {
+  async getFileTree(groupId, relativePath = '') {
     try {
-      await this.ensureRoomWorkspace(roomId);
-      const roomWorkspace = this.getRoomWorkspace(roomId);
-      const fullPath = path.join(roomWorkspace, relativePath);
+      await this.ensureGroupWorkspace(groupId);
+      const groupWorkspace = this.getGroupWorkspace(groupId);
+      const fullPath = path.join(groupWorkspace, relativePath);
       const items = await fs.readdir(fullPath, { withFileTypes: true });
 
       const tree = [];
@@ -122,12 +122,12 @@ console.log("Hello, World!");
   }
 
   /**
-   * Read file content from room workspace
+   * Read file content from group workspace
    */
-  async readFile(roomId, relativePath) {
+  async readFile(groupId, relativePath) {
     try {
-      const roomWorkspace = this.getRoomWorkspace(roomId);
-      const fullPath = path.join(roomWorkspace, relativePath);
+      const groupWorkspace = this.getGroupWorkspace(groupId);
+      const fullPath = path.join(groupWorkspace, relativePath);
       const ext = path.extname(fullPath);
 
       if (!this.allowedExtensions.includes(ext) && ext !== '') {
@@ -155,12 +155,12 @@ console.log("Hello, World!");
   }
 
   /**
-   * Write file content to room workspace
+   * Write file content to group workspace
    */
-  async writeFile(roomId, relativePath, content) {
+  async writeFile(groupId, relativePath, content) {
     try {
-      const roomWorkspace = this.getRoomWorkspace(roomId);
-      const fullPath = path.join(roomWorkspace, relativePath);
+      const groupWorkspace = this.getGroupWorkspace(groupId);
+      const fullPath = path.join(groupWorkspace, relativePath);
       const ext = path.extname(fullPath);
 
       if (!this.allowedExtensions.includes(ext) && ext !== '') {
@@ -184,12 +184,12 @@ console.log("Hello, World!");
   }
 
   /**
-   * Create new file in room workspace
+   * Create new file in group workspace
    */
-  async createFile(roomId, relativePath, content = '') {
+  async createFile(groupId, relativePath, content = '') {
     try {
-      const roomWorkspace = this.getRoomWorkspace(roomId);
-      const fullPath = path.join(roomWorkspace, relativePath);
+      const groupWorkspace = this.getGroupWorkspace(groupId);
+      const fullPath = path.join(groupWorkspace, relativePath);
       
       // Check if file already exists
       try {
@@ -220,12 +220,12 @@ console.log("Hello, World!");
   }
 
   /**
-   * Create new directory in room workspace
+   * Create new directory in group workspace
    */
-  async createDirectory(roomId, relativePath) {
+  async createDirectory(groupId, relativePath) {
     try {
-      const roomWorkspace = this.getRoomWorkspace(roomId);
-      const fullPath = path.join(roomWorkspace, relativePath);
+      const groupWorkspace = this.getGroupWorkspace(groupId);
+      const fullPath = path.join(groupWorkspace, relativePath);
       await fs.mkdir(fullPath, { recursive: true });
 
       return {
@@ -241,12 +241,12 @@ console.log("Hello, World!");
   }
 
   /**
-   * Delete file or directory from room workspace
+   * Delete file or directory from group workspace
    */
-  async delete(roomId, relativePath) {
+  async delete(groupId, relativePath) {
     try {
-      const roomWorkspace = this.getRoomWorkspace(roomId);
-      const fullPath = path.join(roomWorkspace, relativePath);
+      const groupWorkspace = this.getGroupWorkspace(groupId);
+      const fullPath = path.join(groupWorkspace, relativePath);
       const stats = await fs.stat(fullPath);
 
       if (stats.isDirectory()) {
@@ -268,13 +268,13 @@ console.log("Hello, World!");
   }
 
   /**
-   * Rename file or directory in room workspace
+   * Rename file or directory in group workspace
    */
-  async rename(roomId, oldPath, newPath) {
+  async rename(groupId, oldPath, newPath) {
     try {
-      const roomWorkspace = this.getRoomWorkspace(roomId);
-      const fullOldPath = path.join(roomWorkspace, oldPath);
-      const fullNewPath = path.join(roomWorkspace, newPath);
+      const groupWorkspace = this.getGroupWorkspace(groupId);
+      const fullOldPath = path.join(groupWorkspace, oldPath);
+      const fullNewPath = path.join(groupWorkspace, newPath);
 
       await fs.rename(fullOldPath, fullNewPath);
 
@@ -294,10 +294,10 @@ console.log("Hello, World!");
   /**
    * Validate path (prevent directory traversal)
    */
-  isValidPath(roomId, relativePath) {
-    const roomWorkspace = this.getRoomWorkspace(roomId);
-    const fullPath = path.join(roomWorkspace, relativePath);
-    return fullPath.startsWith(roomWorkspace);
+  isValidPath(groupId, relativePath) {
+    const groupWorkspace = this.getGroupWorkspace(groupId);
+    const fullPath = path.join(groupWorkspace, relativePath);
+    return fullPath.startsWith(groupWorkspace);
   }
 }
 

@@ -7,15 +7,15 @@ A production-ready real-time collaborative code editor built with React, Socket.
 ### Core Features
 
 - **Real-time Collaboration**: Multiple users can edit code simultaneously
-- **💾 Persistent File Storage**: All files are automatically saved on the server per room
-- **🔄 Real-Time Sync**: File changes sync instantly across all users in the room
+- **💾 Persistent File Storage**: All files are automatically saved on the server per group
+- **🔄 Real-Time Sync**: File changes sync instantly across all users in the group
 - **📁 File Explorer**: Browse, create, and manage files and folders with full persistence
 - **Multi-file Support**: Work with multiple files in an organized project structure
 - **Code Execution**: Compile and run code in JavaScript, Python, Java, C++, C, Go, and TypeScript
 - **Live Output**: See execution results in real-time with all collaborators
 - **Auto-save**: Save files with Ctrl+S, all changes persist on server
 - **Operational Transformation**: Conflict-free synchronization using OT algorithm
-- **Room Management**: Create or join rooms with unique IDs and isolated workspaces
+- **Group Management**: Create or join groups with unique IDs and isolated workspaces
 - **Multi-language Support**: JavaScript, TypeScript, Python, Java, C++, and more
 - **User Presence**: See active users with color-coded avatars
 - **Monaco Editor**: Full-featured code editor with syntax highlighting
@@ -24,13 +24,13 @@ A production-ready real-time collaborative code editor built with React, Socket.
 
 ### 💾 Persistent Storage Features
 
-- **Room-Based Workspaces**: Each room gets its own isolated file storage
+- **Group-Based Workspaces**: Each group gets its own isolated file storage
 - **Automatic Saving**: Files are saved to server and persist across sessions
 - **File Operations**: Create, edit, delete, and organize files and folders
-- **Shared Access**: Everyone in the room can access and edit all files
+- **Shared Access**: Everyone in the group can access and edit all files
 - **Project Organization**: Use folders to structure your codebase
-- **File History**: Files remain available even after users leave the room
-- **Instant Sync**: All file operations broadcast to all room members in real-time
+- **File History**: Files remain available even after users leave the group
+- **Instant Sync**: All file operations broadcast to all group members in real-time
 
 ### Advanced Features
 
@@ -59,7 +59,7 @@ A production-ready real-time collaborative code editor built with React, Socket.
 
 ### Server (Node.js + Express + Socket.IO)
 
-- **RoomManager**: Manages rooms, users, and document state
+- **GroupManager**: Manages groups, users, and document state
 - **CodeExecutor**: Executes code in multiple languages with sandboxing
 - **FileSystemManager**: Handles file/folder operations with workspace isolation
 - **Operational Transformation**: Ensures consistency across concurrent edits
@@ -76,7 +76,7 @@ A production-ready real-time collaborative code editor built with React, Socket.
 - **Terminal**: Integrated terminal for shell commands
 - **SearchPanel**: Find and replace functionality
 - **ExtensionsManager**: Plugin management system
-- **RoomSelector**: Room creation/joining interface
+- **GroupSelector**: Group creation/joining interface
 - **UserPanel**: Shows active collaborators
 - **LanguageSelector**: Switch programming languages
 - **OutputPanel**: Displays code execution results
@@ -97,7 +97,7 @@ cd ../server && npm install
 
 ## 🛠️ Development
 
-````bash
+```bash
 # Run both client and server concurrently
 npm run dev
 
@@ -107,7 +107,7 @@ npm run server
 
 # Terminal 2 - Start client
 npm run client
-n```
+```
 
 The client runs on `http://localhost:5173` and server on `http://localhost:3001`.
 
@@ -119,7 +119,7 @@ The client runs on `http://localhost:5173` and server on `http://localhost:3001`
 - Click the **➕📄** button in the File Explorer
 - Enter a filename (e.g., `app.js`, `index.html`, `script.py`)
 - The file is created and automatically saved on the server
-- All users in the room can see and access the file immediately
+- All users in the group can see and access the file immediately
 
 #### 2. Create a Folder
 - Click the **➕📁** button in the File Explorer
@@ -135,14 +135,14 @@ The client runs on `http://localhost:5173` and server on `http://localhost:3001`
 #### 4. Delete Files/Folders
 - Right-click on any file or folder
 - Select "Delete" from the context menu
-- The file/folder is removed for everyone in the room
+- The file/folder is removed for everyone in the group
 
 ### Collaborative Editing
 
-1. **Create or Join a Room**
+1. **Create or Join a Group**
    - Enter your name on the home screen
-   - Create a new room or enter an existing room ID
-   - Share the room ID with your collaborators
+   - Create a new group or enter an existing group ID
+   - Share the group ID with your collaborators
 
 2. **Work Together**
    - All users see the same file structure
@@ -153,13 +153,13 @@ The client runs on `http://localhost:5173` and server on `http://localhost:3001`
 3. **File Persistence**
    - All files are automatically saved on the server
    - Files remain available even after everyone leaves
-   - Return to the same room later to access your files
-   - Each room has its own isolated workspace
+   - Return to the same group later to access your files
+   - Each group has its own isolated workspace
 
 ### Example Workflow
 
 ```bash
-# Team members join room "project-abc"
+# Team members join group "project-abc"
 # User A creates folder structure:
 src/
 ├── index.js
@@ -182,7 +182,7 @@ npm run build
 
 # Start production server
 npm start
-````
+```
 
 ## 🔧 Configuration
 
@@ -207,7 +207,7 @@ VITE_SERVER_URL=http://localhost:3001
 - Supports JavaScript, Python, Java, C++, C, Go, and TypeScript
 - Isolated execution with 10-second timeout
 - Temporary file management with automatic cleanup
-- Real-time output broadcasting to all room participants
+- Real-time output broadcasting to all group participants
 - Execution time tracking
 
 ### Real-time Synchronization
@@ -227,25 +227,25 @@ VITE_SERVER_URL=http://localhost:3001
 - Debounced cursor position updates (100ms)
 - Code splitting for Monaco Editor
 - Efficient re-rendering with React hooks
-- Automatic cleanup of inactive rooms
+- Automatic cleanup of inactive groups
 
-### Room Management
+### Group Management
 
-- UUID-based room IDs
+- UUID-based group IDs
 - User presence tracking with colors
-- Auto-delete empty rooms after 5 minutes
-- Persistent room state during user reconnections
+- Auto-delete empty groups after 5 minutes
+- Persistent group state during user reconnections
 
 ## 🎯 Usage
 
-1. **Create a Room**: Enter your name and click "Create New Room"
-2. **Share Link**: Copy and share the room link with collaborators
-3. **Join Room**: Others can join using the room ID
+1. **Create a Group**: Enter your name and click "Create New Group"
+2. **Share Link**: Copy and share the group link with collaborators
+3. **Join Group**: Others can join using the group ID
 4. **Browse Files**: Use the file explorer on the left to navigate
 5. **Create Files**: Click ➕📄 to create new files or ➕📁 for folders
 6. **Open Files**: Click any file in the explorer to open it
 7. **Edit Code**: All changes sync in real-time with collaborators
-8. **Save Files**: Press Ctrl+S or click Save button (changes tracked with \*)
+8. **Save Files**: Press Ctrl+S or click Save button (changes tracked with *)
 9. **Change Language**: Select from 12+ programming languages
 10. **Run Code**: Click "Run" button or press Ctrl+Enter to execute code
 11. **View Output**: See execution results in the output panel below the editor
@@ -293,7 +293,7 @@ Click the ⚙️ icon to customize:
 - Terminal appears at the bottom of the editor
 - Click ⬆️ to expand, ⬇️ to collapse
 - Execute shell commands (npm install, git status, etc.)
-- Commands are broadcast to all room participants
+- Commands are broadcast to all group participants
 - Output is synchronized in real-time
 
 ### Search & Replace
@@ -391,7 +391,7 @@ MIT
 - Server uses ES modules (`type: "module"`)
 - Client uses Vite for fast HMR
 - Monaco Editor is code-split for optimal loading
-- Room cleanup runs periodically to free memory
+- Group cleanup runs periodically to free memory
 
 ## 🤝 Contributing
 

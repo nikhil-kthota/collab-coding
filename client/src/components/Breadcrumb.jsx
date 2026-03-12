@@ -1,6 +1,6 @@
 import './Breadcrumb.css';
 
-function Breadcrumb({ currentFile, roomId }) {
+function Breadcrumb({ currentFile, groupId }) {
     if (!currentFile) return null;
 
     const pathParts = currentFile.split('/').filter(part => part);
@@ -9,7 +9,7 @@ function Breadcrumb({ currentFile, roomId }) {
         <div className="breadcrumb">
             <div className="breadcrumb-item">
                 <span className="breadcrumb-icon">📁</span>
-                <span className="breadcrumb-text">{roomId}</span>
+                <span className="breadcrumb-text">{groupId}</span>
             </div>
 
             {pathParts.map((part, index) => (

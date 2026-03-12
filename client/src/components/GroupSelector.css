@@ -1,4 +1,4 @@
-.room-selector {
+.group-selector {
   display: flex;
   justify-content: center;
   align-items: center;
@@ -27,7 +27,7 @@
 }
 
 /* Floating particles effect */
-.room-selector::before {
+.group-selector::before {
   content: '';
   position: absolute;
   width: 200%;
@@ -50,7 +50,7 @@
   }
 }
 
-.room-selector-card {
+.group-selector-card {
   background: rgba(255, 255, 255, 0.95);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
@@ -80,14 +80,14 @@
   }
 }
 
-.room-selector-card:hover {
+.group-selector-card:hover {
   transform: translateY(-5px);
   box-shadow:
     0 12px 48px rgba(26, 77, 46, 0.3),
     0 0 0 1px rgba(255, 255, 255, 0.4) inset;
 }
 
-.room-selector-card h1 {
+.group-selector-card h1 {
   font-size: 2.25rem;
   background: linear-gradient(135deg, #1a4d2e 0%, #27ae60 50%, #2ecc71 100%);
   background-size: 200% 200%;

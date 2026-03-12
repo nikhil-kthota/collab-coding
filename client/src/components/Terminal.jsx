@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import './Terminal.css';
 
-const Terminal = ({ socket, roomId }) => {
+const Terminal = ({ socket, groupId }) => {
   const [output, setOutput] = useState([]);
   const [command, setCommand] = useState('');
   const [isExpanded, setIsExpanded] = useState(false);
@@ -48,7 +48,7 @@ const Terminal = ({ socket, roomId }) => {
     }]);
 
     socket.emit('terminal-command', {
-      roomId,
+      groupId,
       command: command.trim()
     });
 

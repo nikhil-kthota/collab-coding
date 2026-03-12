@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { v4 as uuidv4 } from 'uuid';
-import './RoomSelector.css';
+import './GroupSelector.css';
 
-function RoomSelector({ onJoinRoom, initialUserName }) {
-  const [roomId, setRoomId] = useState('');
+function GroupSelector({ onJoinGroup, initialUserName }) {
+  const [groupId, setGroupId] = useState('');
   const [userName, setUserName] = useState(initialUserName || '');
   const [isCreating, setIsCreating] = useState(false);
 
@@ -15,24 +15,24 @@ function RoomSelector({ onJoinRoom, initialUserName }) {
       return;
     }
 
-    const finalRoomId = isCreating ? uuidv4().split('-')[0] : roomId.trim();
+    const finalGroupId = isCreating ? uuidv4().split('-')[0] : groupId.trim();
     
-    if (!finalRoomId) {
-      alert('Please enter a room ID');
+    if (!finalGroupId) {
+      alert('Please enter a group ID');
       return;
     }
 
-    onJoinRoom(finalRoomId, userName.trim(), isCreating);
+    onJoinGroup(finalGroupId, userName.trim(), isCreating);
   };
 
-  const handleCreateRoom = () => {
+  const handleCreateGroup = () => {
     setIsCreating(true);
-    setRoomId(uuidv4().split('-')[0]);
+    setGroupId(uuidv4().split('-')[0]);
   };
 
   return (
-    <div className="room-selector">
-      <div className="room-selector-card">
+    <div className="group-selector">
+      <div className="group-selector-card">
         <h1>🚀 Collaborative Code Editor</h1>
         <p className="subtitle">Real-time coding with your team</p>
 
@@ -51,16 +51,16 @@ function RoomSelector({ onJoinRoom, initialUserName }) {
           </div>
 
           <div className="form-group">
-            <label htmlFor="roomId">Room ID</label>
+            <label htmlFor="groupId">Group ID</label>
             <input
-              id="roomId"
+              id="groupId"
               type="text"
-              value={roomId}
+              value={groupId}
               onChange={(e) => {
-                setRoomId(e.target.value);
+                setGroupId(e.target.value);
                 setIsCreating(false);
               }}
-              placeholder="Enter room ID to join"
+              placeholder="Enter group ID to join"
               disabled={isCreating}
               required
             />
@@ -68,16 +68,16 @@ function RoomSelector({ onJoinRoom, initialUserName }) {
 
           <div className="button-group">
             <button type="submit" className="btn-primary">
-              {isCreating ? 'Create & Join Room' : 'Join Room'}
+              {isCreating ? 'Create & Join Group' : 'Join Group'}
             </button>
             
             {!isCreating && (
               <button
                 type="button"
-                onClick={handleCreateRoom}
+                onClick={handleCreateGroup}
                 className="btn-secondary"
               >
-                Create New Room
+                Create New Group
               </button>
             )}
           </div>

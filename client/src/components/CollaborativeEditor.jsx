@@ -9,7 +9,7 @@ import './CollaborativeEditor.css';
 
 const SERVER_URL = import.meta.env.VITE_SERVER_URL || 'http://localhost:3001';
 
-function CollaborativeEditor({ roomId, userName, userId, isCreating, onLeaveRoom }) {
+function CollaborativeEditor({ groupId, userName, userId, isCreating, onLeaveGroup }) {
   const [socket, setSocket] = useState(null);
   const [content, setContent] = useState('');
   const [language, setLanguage] = useState('javascript');
@@ -79,9 +79,9 @@ function CollaborativeEditor({ roomId, userName, userId, isCreating, onLeaveRoom
       console.log('Connected to server');
       setIsConnected(true);
       
-      // Join room
-      newSocket.emit('join-room', {
-        roomId,
+      // Join group
+      newSocket.emit('join-group', {
+        groupId,
         userName,
         language,
         isCreating
@@ -93,16 +93,16 @@ function CollaborativeEditor({ roomId, userName, userId, isCreating, onLeaveRoom
       setIsConnected(false);
     });
 
-    // Room not found
-    newSocket.on('room-not-found', ({ roomId }) => {
-      alert(`Room "${roomId}" does not exist. Please check the Room ID or create a new room.`);
+    // Group not found
+    newSocket.on('group-not-found', ({ groupId }) => {
+      alert(`Group "${groupId}" does not exist. Please check the Group ID or create a new group.`);
       newSocket.disconnect();
-      onLeaveRoom();
+      onLeaveGroup();
     });
 
-    // Room joined successfully
-    newSocket.on('room-joined', ({ content, language, users, version }) => {
-      console.log('Joined room successfully');
+    // Group joined successfully
+    newSocket.on('group-joined', ({ content, language, users, version }) => {
+      console.log('Joined group successfully');
       isRemoteChange.current = true;
       setContent(content);
       setLanguage(language);
@@ -218,7 +218,7 @@ function CollaborativeEditor({ roomId, userName, userId, isCreating, onLeaveRoom
       if (path === currentFile && userId !== socket?.id) {
         // Notify user that the file was updated by someone else
         if (confirm(`File "${path}" was updated by another user. Reload?`)) {
-          newSocket.emit('open-file', { roomId, path });
+          newSocket.emit('open-file', { groupId, path });
         }
       }
     });
@@ -244,10 +244,10 @@ function CollaborativeEditor({ roomId, userName, userId, isCreating, onLeaveRoom
     setSocket(newSocket);
 
     return () => {
-      newSocket.emit('leave-room', { roomId });
+      newSocket.emit('leave-group', { groupId });
       newSocket.close();
     };
-  }, [roomId, userName, language]);
+  }, [groupId, userName, language]);
 
   // Handle editor mount
   const handleEditorDidMount = (editor, monaco) => {
@@ -322,7 +322,7 @@ function CollaborativeEditor({ roomId, userName, userId, isCreating, onLeaveRoom
           };
 
           socket.emit('code-change', {
-            roomId,
+            groupId,
             change: operation,
             version
           });
@@ -337,7 +337,7 @@ function CollaborativeEditor({ roomId, userName, userId, isCreating, onLeaveRoom
         // Throttle cursor updates
         if (Date.now() - (lastCursorPosition.current || 0) > 100) {
           socket.emit('cursor-position', {
-            roomId,
+            groupId,
             position: {
               lineNumber: position.lineNumber,
               column: position.column
@@ -388,7 +388,7 @@ function CollaborativeEditor({ roomId, userName, userId, isCreating, onLeaveRoom
 
     setIsRunning(true);
     socket.emit('execute-code', {
-      roomId,
+      groupId,
       code,
       language,
       userName
@@ -480,7 +480,7 @@ function CollaborativeEditor({ roomId, userName, userId, isCreating, onLeaveRoom
 
     const content = editorRef.current.getValue();
     socket.emit('save-file', {
-      roomId,
+      groupId,
       path: currentFile,
       content
     });
@@ -515,7 +515,7 @@ function CollaborativeEditor({ roomId, userName, userId, isCreating, onLeaveRoom
   const handleTabChange = (tabId) => {
     const tab = openTabs.find(t => t.id === tabId);
     if (tab && socket) {
-      socket.emit('open-file', { roomId, path: tab.path });
+      socket.emit('open-file', { groupId, path: tab.path });
       setActiveTab(tabId);
     }
   };
@@ -648,17 +648,17 @@ function CollaborativeEditor({ roomId, userName, userId, isCreating, onLeaveRoom
     setLanguage(newLanguage);
     if (socket && isConnected) {
       socket.emit('language-change', {
-        roomId,
+        groupId,
         language: newLanguage
       });
     }
   };
 
-  // Copy room link
-  const copyRoomLink = () => {
-    const link = `${window.location.origin}?room=${roomId}`;
+  // Copy group link
+  const copyGroupLink = () => {
+    const link = `${window.location.origin}?group=${groupId}`;
     navigator.clipboard.writeText(link);
-    alert('Room link copied to clipboard!');
+    alert('Group link copied to clipboard!');
   };
 
   return (
@@ -666,9 +666,9 @@ function CollaborativeEditor({ roomId, userName, userId, isCreating, onLeaveRoom
       <div className="editor-header">
         <div className="header-left">
           <h2>Collaborative Code Editor</h2>
-          <div className="room-info">
-            <span className="room-id">Room: {roomId}</span>
-            <button onClick={copyRoomLink} className="btn-copy">
+          <div className="group-info">
+            <span className="group-id">Group: {groupId}</span>
+            <button onClick={copyGroupLink} className="btn-copy">
               📋 Copy Link
             </button>
           </div>
@@ -705,8 +705,8 @@ function CollaborativeEditor({ roomId, userName, userId, isCreating, onLeaveRoom
             <span className={`status-indicator ${isConnected ? 'connected' : 'disconnected'}`}></span>
             {isConnected ? 'Connected' : 'Disconnected'}
           </div>
-          <button onClick={onLeaveRoom} className="btn-leave">
-            Leave Room
+          <button onClick={onLeaveGroup} className="btn-leave">
+            Leave Group
           </button>
         </div>
       </div>
@@ -716,8 +716,8 @@ function CollaborativeEditor({ roomId, userName, userId, isCreating, onLeaveRoom
           <div className="info-content">
             <span className="info-icon">ℹ️</span>
             <span className="info-text">
-              <strong>Persistent Storage:</strong> All files and folders in this room are automatically saved. 
-              Everyone in the room can access, edit, and create files. Changes are synced in real-time!
+              <strong>Persistent Storage:</strong> All files and folders in this group are automatically saved. 
+              Everyone in the group can access, edit, and create files. Changes are synced in real-time!
             </span>
           </div>
           <button className="info-close" onClick={() => setShowInfoBanner(false)} title="Close">

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import './FileExplorer.css';
 
-function FileExplorer({ socket, roomId, onFileSelect, currentFile }) {
+function FileExplorer({ socket, groupId, onFileSelect, currentFile }) {
   const [fileTree, setFileTree] = useState([]);
   const [expandedFolders, setExpandedFolders] = useState(new Set(['']));
   const [contextMenu, setContextMenu] = useState(null);
@@ -11,7 +11,7 @@ function FileExplorer({ socket, roomId, onFileSelect, currentFile }) {
   useEffect(() => {
     if (socket) {
       // Request file tree
-      socket.emit('get-file-tree', { roomId });
+      socket.emit('get-file-tree', { groupId });
 
       // Listen for file tree updates
       socket.on('file-tree-update', ({ tree }) => {
@@ -21,11 +21,11 @@ function FileExplorer({ socket, roomId, onFileSelect, currentFile }) {
 
       socket.on('file-created', ({ path }) => {
         // Refresh tree
-        socket.emit('get-file-tree', { roomId });
+        socket.emit('get-file-tree', { groupId });
       });
 
       socket.on('file-deleted', ({ path }) => {
-        socket.emit('get-file-tree', { roomId });
+        socket.emit('get-file-tree', { groupId });
       });
 
       return () => {
@@ -34,7 +34,7 @@ function FileExplorer({ socket, roomId, onFileSelect, currentFile }) {
         socket.off('file-deleted');
       };
     }
-  }, [socket, roomId]);
+  }, [socket, groupId]);
 
   const toggleFolder = (folderPath) => {
     const newExpanded = new Set(expandedFolders);
@@ -43,13 +43,13 @@ function FileExplorer({ socket, roomId, onFileSelect, currentFile }) {
     } else {
       newExpanded.add(folderPath);
       // Load folder contents
-      socket.emit('get-folder-contents', { roomId, path: folderPath });
+      socket.emit('get-folder-contents', { groupId, path: folderPath });
     }
     setExpandedFolders(newExpanded);
   };
 
   const handleFileClick = (file) => {
-    socket.emit('open-file', { roomId, path: file.path });
+    socket.emit('open-file', { groupId, path: file.path });
   };
 
   const handleContextMenu = (e, item) => {
@@ -76,9 +76,9 @@ function FileExplorer({ socket, roomId, onFileSelect, currentFile }) {
     const newPath = parentPath ? `${parentPath}/${name}` : name;
 
     if (newItemDialog.type === 'file') {
-      socket.emit('create-file', { roomId, path: newPath });
+      socket.emit('create-file', { groupId, path: newPath });
     } else {
-      socket.emit('create-folder', { roomId, path: newPath });
+      socket.emit('create-folder', { groupId, path: newPath });
     }
 
     setNewItemDialog(null);
@@ -86,13 +86,13 @@ function FileExplorer({ socket, roomId, onFileSelect, currentFile }) {
 
   const handleDelete = () => {
     if (contextMenu?.item && confirm(`Delete ${contextMenu.item.name}?`)) {
-      socket.emit('delete-file', { roomId, path: contextMenu.item.path });
+      socket.emit('delete-file', { groupId, path: contextMenu.item.path });
     }
     setContextMenu(null);
   };
 
   const handleRefresh = () => {
-    socket.emit('get-file-tree', { roomId });
+    socket.emit('get-file-tree', { groupId });
     setContextMenu(null);
   };
 
@@ -185,7 +185,7 @@ function FileExplorer({ socket, roomId, onFileSelect, currentFile }) {
           <div className="explorer-empty">
             <p>📂 No files yet</p>
             <p className="explorer-hint">Create your first file to get started!</p>
-            <p className="explorer-hint-small">All files are saved automatically and shared with everyone in this room.</p>
+            <p className="explorer-hint-small">All files are saved automatically and shared with everyone in this group.</p>
             <button onClick={() => handleCreateNew('file')}>
               ➕ Create first file
             </button>

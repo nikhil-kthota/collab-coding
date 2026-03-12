@@ -7,10 +7,10 @@ import './App.css';
 function App() {
   const [searchParams] = useSearchParams();
 
-  // Read room info directly from URL params passed by CLP dashboard
-  const [roomId] = useState(() => searchParams.get('roomId') || null);
+  // Read group info directly from URL params passed by CLP dashboard
+  const [groupId] = useState(() => searchParams.get('groupId') || null);
   const [userName] = useState(() => {
-    const urlName = searchParams.get('userName');
+    const urlName = searchParams.get('userName') || searchParams.get('groupName');
     if (urlName) return urlName;
     return localStorage.getItem('userName') || 'Anonymous';
   });
@@ -22,15 +22,15 @@ function App() {
     if (userName) localStorage.setItem('userName', userName);
   }, [userName]);
 
-  const handleLeaveRoom = () => {
+  const handleLeaveGroup = () => {
     window.close(); // close the editor tab and go back to CLP
   };
 
-  if (!roomId) {
+  if (!groupId) {
     return (
       <div className="app" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', background: '#1e1e2e', color: '#cdd6f4' }}>
         <div style={{ textAlign: 'center' }}>
-          <h2 style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>No room specified</h2>
+          <h2 style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>No group specified</h2>
           <p style={{ opacity: 0.6 }}>Please open this editor from the CLP dashboard.</p>
         </div>
       </div>
@@ -41,11 +41,11 @@ function App() {
     <div className="app">
       <div className="editor-container">
         <CollaborativeEditor
-          roomId={roomId}
+          groupId={groupId}
           userName={userName}
           userId={userId}
           isCreating={isCreating}
-          onLeaveRoom={handleLeaveRoom}
+          onLeaveGroup={handleLeaveGroup}
         />
       </div>
     </div>

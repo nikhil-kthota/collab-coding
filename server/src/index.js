@@ -3,7 +3,7 @@ import { createServer } from 'http';
 import { Server } from 'socket.io';
 import cors from 'cors';
 import dotenv from 'dotenv';
-import RoomManager from './services/RoomManager.js';
+import GroupManager from './services/GroupManager.js';
 import { applyOperation, transformOperation } from './services/OperationalTransform.js';
 import CodeExecutor from './services/CodeExecutor.js';
 import FileSystemManager from './services/FileSystemManager.js';
@@ -35,7 +35,7 @@ const io = new Server(httpServer, {
   pingInterval: 25000
 });
 
-const roomManager = new RoomManager();
+const groupManager = new GroupManager();
 const codeExecutor = new CodeExecutor();
 const fileSystemManager = new FileSystemManager();
 
@@ -43,8 +43,8 @@ const fileSystemManager = new FileSystemManager();
 app.get('/health', (req, res) => {
   res.json({ 
     status: 'ok', 
-    rooms: roomManager.getRoomCount(),
-    users: roomManager.getTotalUsers()
+    groups: groupManager.getGroupCount(),
+    users: groupManager.getTotalUsers()
   });
 });
 
@@ -61,69 +61,69 @@ app.get('*', (req, res) => {
 io.on('connection', (socket) => {
   console.log(`User connected: ${socket.id}`);
   
-  // Join room
-  socket.on('join-room', ({ roomId, userName, language, isCreating }) => {
+  // Join group
+  socket.on('join-group', ({ groupId, userName, language, isCreating }) => {
     try {
-      // If user is joining (not creating), verify the room exists
-      if (!isCreating && !roomManager.roomExists(roomId)) {
-        socket.emit('room-not-found', { roomId });
+      // If user is joining (not creating), verify the group exists
+      if (!isCreating && !groupManager.groupExists(groupId)) {
+        socket.emit('group-not-found', { groupId });
         return;
       }
 
-      const room = roomManager.joinRoom(roomId, socket.id, userName);
-      socket.join(roomId);
+      const group = groupManager.joinGroup(groupId, socket.id, userName);
+      socket.join(groupId);
       
       // Send current document state to the new user
-      socket.emit('room-joined', {
-        roomId,
-        content: room.content,
-        language: room.language,
-        users: room.users,
-        version: room.version
+      socket.emit('group-joined', {
+        groupId,
+        content: group.content,
+        language: group.language,
+        users: group.users,
+        version: group.version
       });
       
-      // Notify others in the room
-      socket.to(roomId).emit('user-joined', {
+      // Notify others in the group
+      socket.to(groupId).emit('user-joined', {
         userId: socket.id,
         userName,
-        users: room.users
+        users: group.users
       });
       
-      console.log(`User ${userName} (${socket.id}) joined room ${roomId}`);
+      console.log(`User ${userName} (${socket.id}) joined group ${groupId}`);
     } catch (error) {
       socket.emit('error', { message: error.message });
     }
   });
   
   // Handle code changes with operational transformation
-  socket.on('code-change', ({ roomId, change, version }) => {
+  socket.on('code-change', ({ groupId, change, version }) => {
     try {
-      const room = roomManager.getRoom(roomId);
-      if (!room) {
-        socket.emit('error', { message: 'Room not found' });
+      const group = groupManager.getGroup(groupId);
+      if (!group) {
+        socket.emit('error', { message: 'Group not found' });
         return;
       }
       
       // Version check for conflict resolution
-      if (version < room.version) {
+      if (version < group.version) {
         // Transform the operation against missed operations
-        const transformedChange = roomManager.transformOperation(roomId, change, version);
+        const transformedChange = groupManager.transformOperation(groupId, change, version);
         change = transformedChange;
       }
       
       // Apply the change
-      room.content = applyOperation(room.content, change);
-      room.version++;
+      group.content = applyOperation(group.content, change);
+      group.version++;
       
       // Broadcast to all clients except sender
-      socket.to(roomId).emit('code-update', {
+      socket.to(groupId).emit('code-update', {
         change,
         userId: socket.id,
-        version: room.version
+        version: group.version
       });
       
       // Acknowledge to sender
-      socket.emit('change-ack', { version: room.version });
+      socket.emit('change-ack', { version: group.version });
       
     } catch (error) {
       console.error('Code change error:', error);
@@ -132,12 +132,12 @@ io.on('connection', (socket) => {
   });
   
   // Language change
-  socket.on('language-change', ({ roomId, language }) => {
+  socket.on('language-change', ({ groupId, language }) => {
     try {
-      const room = roomManager.getRoom(roomId);
-      if (room) {
-        room.language = language;
-        socket.to(roomId).emit('language-update', { language, userId: socket.id });
+      const group = groupManager.getGroup(groupId);
+      if (group) {
+        group.language = language;
+        socket.to(groupId).emit('language-update', { language, userId: socket.id });
       }
     } catch (error) {
       socket.emit('error', { message: error.message });
@@ -145,8 +145,8 @@ io.on('connection', (socket) => {
   });
   
   // Cursor position updates
-  socket.on('cursor-position', ({ roomId, position, selection }) => {
-    socket.to(roomId).emit('cursor-update', {
+  socket.on('cursor-position', ({ groupId, position, selection }) => {
+    socket.to(groupId).emit('cursor-update', {
       userId: socket.id,
       position,
       selection
@@ -154,50 +154,50 @@ io.on('connection', (socket) => {
   });
   
   // User typing indicator
-  socket.on('typing', ({ roomId }) => {
-    socket.to(roomId).emit('user-typing', { userId: socket.id });
+  socket.on('typing', ({ groupId }) => {
+    socket.to(groupId).emit('user-typing', { userId: socket.id });
   });
   
   // Handle disconnection
   socket.on('disconnect', () => {
     console.log(`User disconnected: ${socket.id}`);
     
-    const userRooms = roomManager.getUserRooms(socket.id);
-    userRooms.forEach(roomId => {
-      const room = roomManager.leaveRoom(roomId, socket.id);
+    const userGroups = groupManager.getUserGroups(socket.id);
+    userGroups.forEach(groupId => {
+      const group = groupManager.leaveGroup(groupId, socket.id);
       
-      if (room) {
+      if (group) {
         // Notify others
-        socket.to(roomId).emit('user-left', {
+        socket.to(groupId).emit('user-left', {
           userId: socket.id,
-          users: room.users
+          users: group.users
         });
       }
     });
   });
   
-  // Explicit leave room
-  socket.on('leave-room', ({ roomId }) => {
-    const room = roomManager.leaveRoom(roomId, socket.id);
-    socket.leave(roomId);
+  // Explicit leave group
+  socket.on('leave-group', ({ groupId }) => {
+    const group = groupManager.leaveGroup(groupId, socket.id);
+    socket.leave(groupId);
     
-    if (room) {
-      socket.to(roomId).emit('user-left', {
+    if (group) {
+      socket.to(groupId).emit('user-left', {
         userId: socket.id,
-        users: room.users
+        users: group.users
       });
     }
   });
   
   // Execute code
-  socket.on('execute-code', async ({ roomId, code, language, userName }) => {
+  socket.on('execute-code', async ({ groupId, code, language, userName }) => {
     try {
-      console.log(`Executing ${language} code for user ${socket.id} in room ${roomId}`);
+      console.log(`Executing ${language} code for user ${socket.id} in group ${groupId}`);
       
       const result = await codeExecutor.executeCode(code, language);
       
-      // Broadcast result to all users in the room
-      io.to(roomId).emit('execution-result', {
+      // Broadcast result to all users in the group
+      io.to(groupId).emit('execution-result', {
         ...result,
         userId: socket.id,
         userName,
@@ -218,27 +218,27 @@ io.on('connection', (socket) => {
   });
   
   // File system operations
-  socket.on('get-file-tree', async ({ roomId }) => {
+  socket.on('get-file-tree', async ({ groupId }) => {
     try {
-      const tree = await fileSystemManager.getFileTree(roomId);
+      const tree = await fileSystemManager.getFileTree(groupId);
       socket.emit('file-tree-update', { tree });
     } catch (error) {
       socket.emit('error', { message: 'Failed to load file tree' });
     }
   });
   
-  socket.on('get-folder-contents', async ({ roomId, path }) => {
+  socket.on('get-folder-contents', async ({ groupId, path }) => {
     try {
-      const contents = await fileSystemManager.getFileTree(roomId, path);
+      const contents = await fileSystemManager.getFileTree(groupId, path);
       socket.emit('folder-contents-update', { path, contents });
     } catch (error) {
       socket.emit('error', { message: 'Failed to load folder contents' });
     }
   });
   
-  socket.on('open-file', async ({ roomId, path }) => {
+  socket.on('open-file', async ({ groupId, path }) => {
     try {
-      const result = await fileSystemManager.readFile(roomId, path);
+      const result = await fileSystemManager.readFile(groupId, path);
       if (result.success) {
         socket.emit('file-opened', result);
       } else {
@@ -249,17 +249,17 @@ io.on('connection', (socket) => {
     }
   });
   
-  socket.on('save-file', async ({ roomId, path, content }) => {
+  socket.on('save-file', async ({ groupId, path, content }) => {
     try {
-      const result = await fileSystemManager.writeFile(roomId, path, content);
+      const result = await fileSystemManager.writeFile(groupId, path, content);
       if (result.success) {
         // Notify the sender
         socket.emit('file-saved', { ...result, timestamp: Date.now() });
-        // Notify all others in the room that file was updated
-        socket.to(roomId).emit('file-updated', { path, userId: socket.id, timestamp: Date.now() });
+        // Notify all others in the group that file was updated
+        socket.to(groupId).emit('file-updated', { path, userId: socket.id, timestamp: Date.now() });
         // Refresh file tree for everyone
-        const tree = await fileSystemManager.getFileTree(roomId);
-        io.to(roomId).emit('file-tree-update', { tree });
+        const tree = await fileSystemManager.getFileTree(groupId);
+        io.to(groupId).emit('file-tree-update', { tree });
       } else {
         socket.emit('error', { message: result.error });
       }
@@ -268,14 +268,14 @@ io.on('connection', (socket) => {
     }
   });
   
-  socket.on('create-file', async ({ roomId, path, content = '' }) => {
+  socket.on('create-file', async ({ groupId, path, content = '' }) => {
     try {
-      const result = await fileSystemManager.createFile(roomId, path, content);
+      const result = await fileSystemManager.createFile(groupId, path, content);
       if (result.success) {
-        // Notify everyone in the room
-        const tree = await fileSystemManager.getFileTree(roomId);
-        io.to(roomId).emit('file-created', { ...result, timestamp: Date.now() });
-        io.to(roomId).emit('file-tree-update', { tree });
+        // Notify everyone in the group
+        const tree = await fileSystemManager.getFileTree(groupId);
+        io.to(groupId).emit('file-created', { ...result, timestamp: Date.now() });
+        io.to(groupId).emit('file-tree-update', { tree });
       } else {
         socket.emit('error', { message: result.error });
       }
@@ -284,14 +284,14 @@ io.on('connection', (socket) => {
     }
   });
   
-  socket.on('create-folder', async ({ roomId, path }) => {
+  socket.on('create-folder', async ({ groupId, path }) => {
     try {
-      const result = await fileSystemManager.createDirectory(roomId, path);
+      const result = await fileSystemManager.createDirectory(groupId, path);
       if (result.success) {
-        // Notify everyone in the room
-        const tree = await fileSystemManager.getFileTree(roomId);
-        io.to(roomId).emit('folder-created', { ...result, timestamp: Date.now() });
-        io.to(roomId).emit('file-tree-update', { tree });
+        // Notify everyone in the group
+        const tree = await fileSystemManager.getFileTree(groupId);
+        io.to(groupId).emit('folder-created', { ...result, timestamp: Date.now() });
+        io.to(groupId).emit('file-tree-update', { tree });
       } else {
         socket.emit('error', { message: result.error });
       }
@@ -300,14 +300,14 @@ io.on('connection', (socket) => {
     }
   });
   
-  socket.on('delete-file', async ({ roomId, path }) => {
+  socket.on('delete-file', async ({ groupId, path }) => {
     try {
-      const result = await fileSystemManager.delete(roomId, path);
+      const result = await fileSystemManager.delete(groupId, path);
       if (result.success) {
-        // Notify everyone in the room
-        const tree = await fileSystemManager.getFileTree(roomId);
-        io.to(roomId).emit('file-deleted', { ...result, timestamp: Date.now() });
-        io.to(roomId).emit('file-tree-update', { tree });
+        // Notify everyone in the group
+        const tree = await fileSystemManager.getFileTree(groupId);
+        io.to(groupId).emit('file-deleted', { ...result, timestamp: Date.now() });
+        io.to(groupId).emit('file-tree-update', { tree });
       } else {
         socket.emit('error', { message: result.error });
       }
@@ -317,14 +317,14 @@ io.on('connection', (socket) => {
   });
 
   // Terminal command execution
-  socket.on('terminal-command', async ({ roomId, command }) => {
+  socket.on('terminal-command', async ({ groupId, command }) => {
     try {
       const { exec } = await import('child_process');
       const { promisify } = await import('util');
       const execAsync = promisify(exec);
 
-      const room = roomManager.getRoom(roomId);
-      const user = room?.users.get(socket.id);
+      const group = groupManager.getGroup(groupId);
+      const user = group?.users.get(socket.id);
 
       try {
         const { stdout, stderr } = await execAsync(command, {
@@ -334,13 +334,13 @@ io.on('connection', (socket) => {
         });
 
         const output = stdout || stderr || 'Command completed with no output';
-        io.to(roomId).emit('terminal-output', {
+        io.to(groupId).emit('terminal-output', {
           output,
           command,
           user: user?.name || 'Unknown'
         });
       } catch (execError) {
-        io.to(roomId).emit('terminal-error', {
+        io.to(groupId).emit('terminal-error', {
           error: execError.message,
           command
         });
