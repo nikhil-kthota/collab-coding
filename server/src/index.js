@@ -78,7 +78,7 @@ io.on('connection', (socket) => {
         groupId,
         content: group.content,
         language: group.language,
-        users: group.users,
+        users: Array.from(group.users.entries()),
         version: group.version
       });
       
@@ -86,7 +86,7 @@ io.on('connection', (socket) => {
       socket.to(groupId).emit('user-joined', {
         userId: socket.id,
         userName,
-        users: group.users
+        users: Array.from(group.users.entries())
       });
       
       console.log(`User ${userName} (${socket.id}) joined group ${groupId}`);
@@ -170,7 +170,7 @@ io.on('connection', (socket) => {
         // Notify others
         socket.to(groupId).emit('user-left', {
           userId: socket.id,
-          users: group.users
+          users: Array.from(group.users.entries())
         });
       }
     });
@@ -184,7 +184,7 @@ io.on('connection', (socket) => {
     if (group) {
       socket.to(groupId).emit('user-left', {
         userId: socket.id,
-        users: group.users
+        users: Array.from(group.users.entries())
       });
     }
   });
