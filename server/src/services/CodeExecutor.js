@@ -1,4 +1,3 @@
-import fetch from 'node-fetch'; // if node > 18, native fetch is used, but we'll use native fetch safely
 
 /**
  * Code Executor Service using JDoodle API
