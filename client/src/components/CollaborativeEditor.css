@@ -306,6 +306,8 @@
     width: 100%;
     height: 400px !important; /* Force explicit height for Monaco on mobile */
     min-height: 400px;
+    order: 2; /* Render below UserPanel */
+    border-top: 1px solid #10b981; /* visual distinction */
   }
 
   .sidebar {
