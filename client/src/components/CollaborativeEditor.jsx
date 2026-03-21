@@ -384,9 +384,9 @@ function CollaborativeEditor({ groupId, userName, userId, isCreating, onLeaveGro
     });
   };
 
-  // Handle code execution
-  const handleRunCode = () => {
-    if (!socket || !isConnected || isRunning || !editorRef.current) {
+  // Handle code execution directly from browser to Piston API
+  const handleRunCode = async () => {
+    if (!socketRef.current || !isConnectedRef.current || isRunning || !editorRef.current) {
       return;
     }
 
@@ -397,12 +397,90 @@ function CollaborativeEditor({ groupId, userName, userId, isCreating, onLeaveGro
     }
 
     setIsRunning(true);
-    socket.emit('execute-code', {
-      groupId,
-      code,
-      language,
-      userName
-    });
+    // Tell users we started
+    setOutput([{ 
+      success: true, 
+      output: `Executing ${language} code...`, 
+      error: null, 
+      userName: userName || 'System', 
+      timestamp: Date.now() 
+    }]);
+
+    try {
+      const langMap = {
+        'javascript': 'javascript', 'js': 'javascript',
+        'python': 'python', 'py': 'python',
+        'java': 'java', 'cpp': 'c++', 'c++': 'c++',
+        'c': 'c', 'go': 'go', 'typescript': 'typescript', 'ts': 'typescript'
+      };
+
+      const mappedLang = langMap[language.toLowerCase()];
+      if (!mappedLang) {
+        throw new Error(`Language "${language}" is not supported`);
+      }
+
+      let mainFileName = 'main.' + mappedLang;
+      if (mappedLang === 'java') {
+        const classNameMatch = code.match(/public\s+class\s+(\w+)/);
+        mainFileName = classNameMatch ? classNameMatch[1] + '.java' : 'Main.java';
+      }
+
+      const startTime = Date.now();
+      const response = await fetch('https://emkc.org/api/v2/piston/execute', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          language: mappedLang,
+          version: '*', // auto select latest available
+          files: [{ name: mainFileName, content: code }]
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`Execution Service Blocked: ${response.statusText}`);
+      }
+
+      const result = await response.json();
+      const executionTime = Date.now() - startTime;
+
+      let finalOutput = '';
+      let isSuccess = false;
+      let finalError = null;
+
+      if (result.compile && result.compile.code !== 0) {
+        finalError = 'Compilation Error:\n' + result.compile.output;
+      } else if (result.run) {
+        isSuccess = result.run.code === 0;
+        finalOutput = result.run.output || (isSuccess ? 'Program executed successfully (no output)' : '');
+        if (!isSuccess) {
+          finalError = 'Runtime Error:\n' + (result.run.stderr || result.run.output);
+        }
+      }
+
+      // Tell the server to broadcast this result
+      socketRef.current.emit('broadcast-execution', {
+        groupId,
+        userName,
+        result: {
+          success: isSuccess,
+          output: finalOutput,
+          error: finalError,
+          executionTime
+        }
+      });
+      
+    } catch (err) {
+      socketRef.current.emit('broadcast-execution', {
+        groupId,
+        userName,
+        result: {
+          success: false,
+          output: '',
+          error: err.message,
+          executionTime: 0
+        }
+      });
+    }
   };
 
   // Clear output
