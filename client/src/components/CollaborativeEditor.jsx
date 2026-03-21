@@ -57,6 +57,16 @@ function CollaborativeEditor({ groupId, userName, userId, isCreating, onLeaveGro
   const isRemoteChange = useRef(false);
   const pendingChanges = useRef([]);
   const lastCursorPosition = useRef(null);
+  
+  const socketRef = useRef(null);
+  const isConnectedRef = useRef(false);
+  const versionRef = useRef(0);
+
+  useEffect(() => {
+    socketRef.current = socket;
+    isConnectedRef.current = isConnected;
+    versionRef.current = version;
+  }, [socket, isConnected, version]);
 
   // Apply theme to Monaco editor when theme state changes
   useEffect(() => {
@@ -308,7 +318,7 @@ function CollaborativeEditor({ groupId, userName, userId, isCreating, onLeaveGro
       }
 
       // Send changes to server
-      if (socket && isConnected) {
+      if (socketRef.current && isConnectedRef.current) {
         event.changes.forEach((change) => {
           const rangeOffset = editor.getModel().getOffsetAt({
             lineNumber: change.range.startLineNumber,
@@ -321,10 +331,10 @@ function CollaborativeEditor({ groupId, userName, userId, isCreating, onLeaveGro
             text: change.text
           };
 
-          socket.emit('code-change', {
+          socketRef.current.emit('code-change', {
             groupId,
             change: operation,
-            version
+            version: versionRef.current
           });
         });
       }
@@ -333,10 +343,10 @@ function CollaborativeEditor({ groupId, userName, userId, isCreating, onLeaveGro
     // Track cursor position
     editor.onDidChangeCursorPosition((event) => {
       const position = event.position;
-      if (socket && isConnected) {
+      if (socketRef.current && isConnectedRef.current) {
         // Throttle cursor updates
         if (Date.now() - (lastCursorPosition.current || 0) > 100) {
-          socket.emit('cursor-position', {
+          socketRef.current.emit('cursor-position', {
             groupId,
             position: {
               lineNumber: position.lineNumber,
