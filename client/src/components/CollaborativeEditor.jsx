@@ -257,7 +257,7 @@ function CollaborativeEditor({ groupId, userName, userId, isCreating, onLeaveGro
       newSocket.emit('leave-group', { groupId });
       newSocket.close();
     };
-  }, [groupId, userName, language]);
+  }, [groupId, userName]);
 
   // Handle editor mount
   const handleEditorDidMount = (editor, monaco) => {
@@ -656,8 +656,8 @@ function CollaborativeEditor({ groupId, userName, userId, isCreating, onLeaveGro
   // Handle language change
   const handleLanguageChange = (newLanguage) => {
     setLanguage(newLanguage);
-    if (socket && isConnected) {
-      socket.emit('language-change', {
+    if (socketRef.current && isConnectedRef.current) {
+      socketRef.current.emit('language-change', {
         groupId,
         language: newLanguage
       });

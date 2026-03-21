@@ -1,3 +1,4 @@
+import fetch from 'node-fetch'; // if node > 18, native fetch is used, but we'll use native fetch safely
 
 /**
  * Code Executor Service using JDoodle API
@@ -15,7 +16,7 @@ class CodeExecutor {
   async executeCode(code, language, input = '') {
     try {
       const startTime = Date.now();
-      
+
       const jdoodleLangMap = {
         'javascript': { language: 'nodejs', versionIndex: '4' },
         'js': { language: 'nodejs', versionIndex: '4' },
@@ -63,7 +64,7 @@ class CodeExecutor {
 
       const result = await response.json();
       const executionTime = Date.now() - startTime;
-      
+
       // JDoodle gives { output, statusCode, memory, cpuTime, error }
       // If error occurs, it is usually provided in output or error field
       if (result.error) {
@@ -85,7 +86,7 @@ class CodeExecutor {
         finalOutput = '';
       } else {
         if (finalOutput === '\\n' || finalOutput.trim() === '') {
-           finalOutput = 'Program executed successfully (no output)';
+          finalOutput = 'Program executed successfully (no output)';
         }
       }
 
