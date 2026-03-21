@@ -189,15 +189,30 @@ io.on('connection', (socket) => {
     }
   });
   
-  // Handle client-side execution broadcasting
-  socket.on('broadcast-execution', ({ groupId, result, userName }) => {
-    // Broadcast result to all users in the group (including sender)
-    io.to(groupId).emit('execution-result', {
-      ...result,
-      userId: socket.id,
-      userName,
-      timestamp: Date.now()
-    });
+  // Execute code via server-side JDoodle
+  socket.on('execute-code', async ({ groupId, code, language, userName }) => {
+    try {
+      console.log(`Executing ${language} code for user ${socket.id} in group ${groupId}`);
+      const result = await codeExecutor.executeCode(code, language);
+      
+      // Broadcast result to all users in the group
+      io.to(groupId).emit('execution-result', {
+        ...result,
+        userId: socket.id,
+        userName,
+        timestamp: Date.now()
+      });
+    } catch (error) {
+      console.error('Code execution error:', error);
+      socket.emit('execution-result', {
+        success: false,
+        error: error.message,
+        output: '',
+        userId: socket.id,
+        userName,
+        timestamp: Date.now()
+      });
+    }
   });
   
   // File system operations

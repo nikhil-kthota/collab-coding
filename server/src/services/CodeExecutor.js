@@ -1,39 +1,36 @@
-import path from 'path';
-import { fileURLToPath } from 'url';
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 /**
- * Code Executor Service using Piston API
- * Executes code in various languages without needing local compilers
+ * Code Executor Service using JDoodle API
+ * Executes code securely over remote compilation
  */
 class CodeExecutor {
   constructor() {
-    this.timeout = 10000; // 10 seconds
+    this.clientId = process.env.JDOODLE_CLIENT_ID || 'f0cb76d7a379d0cc07c24faf34d67bdb';
+    this.clientSecret = process.env.JDOODLE_CLIENT_SECRET || '75cfe99c9038bc8c894b9ea61a5f8f7a4e99e076a1aa1ecad9485b98c1256fcc';
   }
 
   /**
-   * Execute code based on language via Piston API
+   * Execute code based on language via JDoodle API
    */
   async executeCode(code, language, input = '') {
     try {
       const startTime = Date.now();
       
-      const pistonLangMap = {
-        'javascript': 'javascript',
-        'js': 'javascript',
-        'python': 'python',
-        'py': 'python',
-        'java': 'java',
-        'cpp': 'c++',
-        'c++': 'c++',
-        'c': 'c',
-        'go': 'go',
-        'typescript': 'typescript',
-        'ts': 'typescript'
+      const jdoodleLangMap = {
+        'javascript': { language: 'nodejs', versionIndex: '4' },
+        'js': { language: 'nodejs', versionIndex: '4' },
+        'python': { language: 'python3', versionIndex: '4' },
+        'py': { language: 'python3', versionIndex: '4' },
+        'java': { language: 'java', versionIndex: '4' },
+        'cpp': { language: 'cpp17', versionIndex: '0' },
+        'c++': { language: 'cpp17', versionIndex: '0' },
+        'c': { language: 'c', versionIndex: '5' },
+        'go': { language: 'go', versionIndex: '4' },
+        'typescript': { language: 'nodejs', versionIndex: '4' }, // JDoodle uses nodejs, we might need a workaround for TS, but let's map to JS
+        'ts': { language: 'nodejs', versionIndex: '4' }
       };
 
-      const mappedLang = pistonLangMap[language.toLowerCase()];
+      const mappedLang = jdoodleLangMap[language.toLowerCase()];
 
       if (!mappedLang) {
         return {
@@ -44,69 +41,59 @@ class CodeExecutor {
         };
       }
 
-      // Special case for Java: determine class name or fallback
-      let mainFileName = 'main.' + mappedLang;
-      if (mappedLang === 'java') {
-        const classNameMatch = code.match(/public\s+class\s+(\w+)/);
-        if (classNameMatch) {
-          mainFileName = classNameMatch[1] + '.java';
-        } else {
-          mainFileName = 'Main.java'; // fallback
-        }
-      }
-
-      // Call Piston API
-      const response = await fetch('https://emkc.org/api/v2/piston/execute', {
+      // JDoodle API Request
+      const response = await fetch('https://api.jdoodle.com/v1/execute', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          language: mappedLang,
-          version: '*', // auto-select latest
-          files: [
-            {
-              name: mainFileName,
-              content: code
-            }
-          ],
+          script: code,
+          language: mappedLang.language,
+          versionIndex: mappedLang.versionIndex,
           stdin: input,
-          compile_timeout: this.timeout,
-          run_timeout: this.timeout
+          clientId: this.clientId,
+          clientSecret: this.clientSecret
         })
       });
 
       if (!response.ok) {
-        throw new Error(`Piston API Error: ${response.statusText}`);
+        throw new Error(`Execution Service Blocked or Failed: ${response.statusText}`);
       }
 
       const result = await response.json();
-      
       const executionTime = Date.now() - startTime;
       
-      if (result.compile && result.compile.code !== 0) {
+      // JDoodle gives { output, statusCode, memory, cpuTime, error }
+      // If error occurs, it is usually provided in output or error field
+      if (result.error) {
         return {
           success: false,
           output: '',
-          error: 'Compilation Error:\n' + result.compile.output,
-          executionTime
-        };
-      }
-      
-      if (result.run && result.run.code !== 0) {
-        return {
-          success: false,
-          output: result.run.stdout || '',
-          error: 'Runtime Error:\n' + (result.run.stderr || result.run.output),
+          error: result.error,
           executionTime
         };
       }
 
+      // Check if compilation failed or if there was a runtime error
+      const isSuccess = result.statusCode === 200;
+      let finalOutput = result.output;
+      let finalError = null;
+
+      if (!isSuccess || finalOutput === null) {
+        finalError = result.output || 'Execution failed';
+        finalOutput = '';
+      } else {
+        if (finalOutput === '\\n' || finalOutput.trim() === '') {
+           finalOutput = 'Program executed successfully (no output)';
+        }
+      }
+
       return {
-        success: true,
-        output: result.run ? result.run.output : 'Execution failed',
-        error: null,
-        executionTime
+        success: isSuccess,
+        output: finalOutput,
+        error: finalError,
+        executionTime: Math.max(parseFloat(result.cpuTime) * 1000 || executionTime, 0)
       };
 
     } catch (error) {
