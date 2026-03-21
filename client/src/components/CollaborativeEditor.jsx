@@ -654,12 +654,7 @@ function CollaborativeEditor({ groupId, userName, userId, isCreating, onLeaveGro
     }
   };
 
-  // Copy group link
-  const copyGroupLink = () => {
-    const link = `${window.location.origin}?group=${groupId}`;
-    navigator.clipboard.writeText(link);
-    alert('Group link copied to clipboard!');
-  };
+
 
   return (
     <div className={`collaborative-editor theme-${theme}`}>
@@ -668,9 +663,6 @@ function CollaborativeEditor({ groupId, userName, userId, isCreating, onLeaveGro
           <h2>Collaborative Code Editor</h2>
           <div className="group-info">
             <span className="group-id">Group: {groupId}</span>
-            <button onClick={copyGroupLink} className="btn-copy">
-              📋 Copy Link
-            </button>
           </div>
           <div className="file-menu">
             <button onClick={handleNewFile} className="btn-file" title="New File">
